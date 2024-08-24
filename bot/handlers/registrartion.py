@@ -7,45 +7,47 @@ from aiogram.fsm.context import FSMContext
 from openpyxl import Workbook, load_workbook
 from aiogram.types import Message, ReplyKeyboardRemove, ContentType
 
+from bot.handlers.start_menu_handler import StartState
+
 
 router_reg = Router()
 
-# def save_state(user_id, state):
-#     # Открываем Excel-файл
-#     state_str = state.state
-#     workbook = load_workbook('states.xlsx')
-#     worksheet = workbook.active
-#
-#     # Ищем строку с существующим состоянием пользователя
-#     for row in range(2, worksheet.max_row + 1):
-#         if worksheet.cell(row=row, column=1).value == user_id:
-#             # Если строка найдена, удаляем ее
-#             worksheet.delete_rows(row)
-#             break
-#
-#     # Добавляем новую строку с состоянием пользователя
-#     worksheet.append([user_id, state_str])
-#
-#     # Сохраняем Excel-файл
-#     workbook.save('states.xlsx')
-#     workbook.close()
-#
-#
-# def get_state(user_id):
-#     workbook = load_workbook('states.xlsx')
-#     worksheet = workbook.active
-#
-#     # Ищем строку с существующим состоянием пользователя
-#     for row in range(2, worksheet.max_row + 1):
-#         if worksheet.cell(row=row, column=1).value == user_id:
-#             # Если строка найдена, удаляем ее
-#             str_state = worksheet.cell(row=row, column=2).value
-#             print(str_state)
-#             state = State(str_state)
-#             print(state)
-#             return str_state
-#     # Сохраняем Excel-файл
-#     workbook.close()
+def save_state(user_id, state):
+    # Открываем Excel-файл
+    state_str = state.state
+    workbook = load_workbook('states.xlsx')
+    worksheet = workbook.active
+
+    # Ищем строку с существующим состоянием пользователя
+    for row in range(2, worksheet.max_row + 1):
+        if worksheet.cell(row=row, column=1).value == user_id:
+            # Если строка найдена, удаляем ее
+            worksheet.delete_rows(row)
+            break
+
+    # Добавляем новую строку с состоянием пользователя
+    worksheet.append([user_id, state_str])
+
+    # Сохраняем Excel-файл
+    workbook.save('states.xlsx')
+    workbook.close()
+
+
+def get_state(user_id):
+    workbook = load_workbook('states.xlsx')
+    worksheet = workbook.active
+
+    # Ищем строку с существующим состоянием пользователя
+    for row in range(2, worksheet.max_row + 1):
+        if worksheet.cell(row=row, column=1).value == user_id:
+            # Если строка найдена, удаляем ее
+            str_state = worksheet.cell(row=row, column=2).value
+            print(str_state)
+            state = State(str_state)
+            print(state)
+            return str_state
+    # Сохраняем Excel-файл
+    workbook.close()
 
 class Registration(StatesGroup):
     waiting_for_name = State()
@@ -55,10 +57,14 @@ class Registration(StatesGroup):
 
 @router_reg.message(F.text == "Регистрация")
 async def waiting_name(message: Message, state: FSMContext):
-    await state.set_state(Registration.waiting_for_name)
-    await message.reply("Введите ФИО, пожалуйста",
-                        reply_markup=ReplyKeyboardRemove())
-
+    user_id = message.chat.id
+    previous_state_menu = get_state(user_id)
+    if previous_state_menu == StartState.reg_or_login:
+        await state.set_state(Registration.waiting_for_name)
+        await message.reply("Введите ФИО, пожалуйста",
+                            reply_markup=ReplyKeyboardRemove())
+    else:
+        await message.answer('wrong')
 
 @router_reg.message(Registration.waiting_for_name)
 async def waiting_name(message: Message, state: FSMContext):
