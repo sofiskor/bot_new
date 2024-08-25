@@ -85,6 +85,7 @@ def get_state(user_id):
     # Сохраняем Excel-файл
     workbook.close()
 
+
 def get_name_in_state(user_id):
     workbook = load_workbook('states.xlsx')
     worksheet = workbook.active
@@ -96,6 +97,7 @@ def get_name_in_state(user_id):
             return name_in_state
     # Сохраняем Excel-файл
     workbook.close()
+
 
 def write_to_excel(column_number, user_id, value):
     # Загружаем существующий Excel файл
@@ -129,6 +131,14 @@ def write_to_excel(column_number, user_id, value):
 
 
 class CreateTO(StatesGroup):
+    video = State()
+    choosen_vid = State()
+    ves = State()
+    choosen_ksh = State()
+    screenshots = State()
+    akb = State()
+    choosen_rrl = State()
+    choosen_sector = State()
     waiting_for_video = State()
     waiting_for_number = State()
     waiting_for_quantity_antenna = State()
@@ -234,18 +244,48 @@ async def waiting_quantity_rrl(message: Message, state: FSMContext):
 
 @router_create.message(CreateTO.waiting_for_choose)
 async def choose_otchet(message: Message, state: FSMContext):
-    l = ["Загрузить ФО по АФУ", "Загрузить ФО по РРЛ", "Загрузить ФО по АКБ", "Назад"]
-    print(message.text)
-    if message.text not in l:
+    user_text = message.text
+    user_id = message.chat.id
+
+    # add checking for text
+
+    if user_text == "Загрузить ФО по АФУ":
+        await state.set_state(CreateTO.choosing_sector)
+        save_state(user_id, CreateTO.choosing_sector, "")
+        await waiting_sector(message, state)
+    elif user_text == "Загрузить ФО по РРЛ":
+        await state.set_state(CreateTO.choosing_rrl)
+        save_state(user_id, CreateTO.choosing_rrl, "")
+        await waiting_rrl(message, state)
+    elif user_text == "Загрузить ФО по АКБ":
+        await state.set_state(CreateTO.akb)
+        save_state(user_id, CreateTO.akb, "")
+        await waiting_akb(message, state)
+    elif user_text == "Загрузить скриншоты":
+        await state.set_state(CreateTO.screenshots)
+        save_state(user_id, CreateTO.screenshots, "")
+        await waiting_screenshots(message, state)
+    elif user_text == "Загрузить ФО по КШ":
+        await state.set_state(CreateTO.choosing_ksh)
+        save_state(user_id, CreateTO.choosing_ksh, "")
+        await waiting_ksh(message, state)
+    elif user_text == "Загрузить ФО по ВЭС":
+        await state.set_state(CreateTO.ves)
+        save_state(user_id, CreateTO.ves, "")
+        await waiting_ves(message, state)
+    elif user_text == "Загрузить ФО по Общему виду":
+        await state.set_state(CreateTO.choosing_vid)
+        save_state(user_id, CreateTO.choosing_vid, "")
+        await waiting_vid(message, state)
+    elif user_text == "Загрузить видео":
+        await state.set_state(CreateTO.video)
+        save_state(user_id, CreateTO.video, "")
+        await waiting_video(message, state)
+    else:
         await message.answer("Пожалуйста, выберите пункт заполнения отчета с помощью кнопок",
                              reply_markup=mp.send_menu.as_markup(resize_keyboard=True)
                              )
-    else:
-        await message.answer("Выберите пункт для заполнения отчета.",
-                             reply_markup=mp.send_menu.as_markup(resize_keyboard=True)
-                             )
-
-    await state.clear()
+    # await state.clear()
 
 
 @router_create.message(F.text == "Назад")
@@ -253,13 +293,11 @@ async def go_back_to_otchet(message: Message, state: FSMContext):
     await state.set_state(CreateTO.waiting_for_choose)
     save_state(message.chat.id, CreateTO.waiting_for_choose, "")
     await choose_otchet(message, state)  # Возвращаемся к выбору сектора
+    print('12')
 
 
 @router_create.message(F.text == "Вернуться назад")
 async def go_back(message: Message, state: FSMContext):
-    # await state.set_state(create_TO.choosing_sector)
-    # data = await state.get_data()
-    # previous_state = data.get('previous_state')
     workbook = load_workbook('states.xlsx')
     worksheet = workbook.active
     previous_state = None
@@ -272,64 +310,22 @@ async def go_back(message: Message, state: FSMContext):
     # Сохраняем Excel-файл
     workbook.close()
 
-    if previous_state == CreateTO.choosing_sector:
+    if previous_state == CreateTO.choosen_sector:
         await state.set_state(CreateTO.waiting_for_choose)
         save_state(message.chat.id, CreateTO.waiting_for_choose, "")
         await waiting_sector(message, state)  # Возвращаемся к выбору сектора
-    elif previous_state == CreateTO.choosing_rrl:
+    elif previous_state == CreateTO.choosen_rrl:
         await state.set_state(CreateTO.waiting_for_choose)
         save_state(message.chat.id, CreateTO.waiting_for_choose, "")
         await waiting_rrl(message, state)
-    elif previous_state == CreateTO.choosing_ksh:
+    elif previous_state == CreateTO.choosen_ksh:
         await state.set_state(CreateTO.waiting_for_choose)
         save_state(message.chat.id, CreateTO.waiting_for_choose, "")
         await waiting_ksh(message, state)
-    elif previous_state == CreateTO.choosing_vid:
+    elif previous_state == CreateTO.choosen_vid:
         await state.set_state(CreateTO.waiting_for_choose)
         save_state(message.chat.id, CreateTO.waiting_for_choose, "")
         await waiting_vid(message, state)
-
-
-## ---------- АФУ  --------------------
-@router_create.message(F.text == "Загрузить ФО по АФУ")
-async def waiting_sector(message: Message, state: FSMContext):
-    # data = await state.get_data()
-    # previous_state_menu = data.get('previous_state_menu')
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    if previous_state_menu == CreateTO.waiting_for_choose:
-        await state.set_state(CreateTO.choosing_sector)
-        save_state(user_id, CreateTO.choosing_sector, "")
-        # await state.update_data(previous_state=CreateTO.choosing_sector)
-        # user_id = message.chat.id
-        datass = get_data_from_data(user_id)
-        builder = ReplyKeyboardBuilder()
-        print(datass)
-
-        for i in range(1, int(datass[2]) + 1):
-            builder.add(KeyboardButton(text=f"Загрузить ФО {str(i)} сектора"))
-        builder.add(KeyboardButton(text="Назад"))
-        builder.adjust(4)
-        await message.answer(
-            "Выберите по какому сектору вы хотите загрузить фотографию:",
-            reply_markup=builder.as_markup(resize_keyboard=True),
-        )
-    else:
-        await message.answer('Не соотвествие')
-
-
-@router_create.message(CreateTO.choosing_sector)
-async def choose_sector(message: Message, state: FSMContext):
-    if message.text == "Вернуться назад":
-        await go_back(message, state)
-    else:
-        name1 = message.text
-        name = name1.replace("Загрузить ФО ", "")
-        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
-        await message.answer("Теперь отправьте фото для выбранного сектора.",
-                             reply_markup=mp.go_back)
 
 
 @router_create.message(CreateTO.waiting_for_photo)
@@ -364,175 +360,6 @@ async def handle_photo(message: Message, state: FSMContext):
         await message.answer("Пожалуйста, отправьте фото.")
 
 
-## ---------- РРЛ  --------------------
-@router_create.message(F.text == "Загрузить ФО по РРЛ")
-async def waiting_rrl(message: Message, state: FSMContext):
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    if previous_state_menu == CreateTO.waiting_for_choose:
-        await state.set_state(CreateTO.choosing_rrl)
-        save_state(message.chat.id, CreateTO.choosing_rrl, "")
-        # await state.update_data(previous_state=CreateTO.choosing_rrl)
-        user_id = message.chat.id
-        datass = get_data_from_data(user_id)
-
-        builder = ReplyKeyboardBuilder()
-        print(datass)
-
-        for i in range(1, int(datass[3]) + 1):
-            builder.add(KeyboardButton(text=f"Загрузить ФО {str(i)} РРЛ"))
-        builder.add(KeyboardButton(text="Назад"))
-        builder.adjust(3)
-        await message.answer(
-            "Выберите по какой РРЛ вы хотите загрузить фотографию:",
-            reply_markup=builder.as_markup(resize_keyboard=True),
-        )
-    else:
-        await message.answer('wrong')
-
-
-@router_create.message(CreateTO.choosing_rrl)
-async def choose_rrl(message: Message, state: FSMContext):
-    if message.text == "Вернуться назад":
-        await go_back(message, state)
-    else:
-        name1 = message.text
-        name = name1.replace("Загрузить ФО ", "")
-        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
-        await message.answer("Теперь отправьте фото для выбранной РРЛ.",
-                             reply_markup=mp.go_back)
-
-
-## ---------- АКБ  --------------------
-@router_create.message(F.text == "Загрузить ФО по АКБ")
-async def waiting_akb(message: Message, state: FSMContext):
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    if previous_state_menu == CreateTO.waiting_for_choose:
-        # await state.update_data(chosen_sector="АКБ")  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, "АКБ")
-        await message.answer(
-            "Загрузите фотографии по АКБ:",
-            reply_markup=mp.go_back_menu)
-    else:
-        await message.answer('wrong')
-
-
-## ---------- Скриншоты  --------------------
-@router_create.message(F.text == "Загрузить скриншоты")
-async def waiting_screenshots(message: Message, state: FSMContext):
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    if previous_state_menu == CreateTO.waiting_for_choose:
-        # await state.update_data(chosen_sector="Скриншоты")  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, "Скриншоты")
-        await message.answer(
-            "Загрузите cкриншоты:",
-            reply_markup=mp.go_back_menu)
-    else:
-        await message.answer('wrong')
-
-
-## ---------- КШ  --------------------
-@router_create.message(F.text == "Загрузить ФО по КШ")
-async def waiting_ksh(message: Message, state: FSMContext):
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    if previous_state_menu == CreateTO.waiting_for_choose:
-        await state.set_state(CreateTO.choosing_ksh)
-        save_state(message.chat.id, CreateTO.choosing_ksh, "")
-        await state.update_data(previous_state=CreateTO.choosing_ksh)
-
-        await message.answer(
-            "Выберите по какому пункту вы хотите загрузить фотографию:",
-            reply_markup=mp.ksh_menu.as_markup(resize_keyboard=True)
-        )
-    else:
-        await message.answer('wrong')
-
-
-@router_create.message(CreateTO.choosing_ksh)
-async def choose_ksh(message: Message, state: FSMContext):
-    if message.text == "Вернуться назад":
-        await go_back(message, state)
-    else:
-        name1 = message.text
-        name = name1.replace("Загрузить ФО ", "")
-        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
-        await message.answer("Теперь отправьте фото.",
-                             reply_markup=mp.go_back)
-
-
-## ---------- ВЭС  --------------------
-@router_create.message(F.text == "Загрузить ФО по ВЭС")
-async def waiting_ves(message: Message, state: FSMContext):
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    if previous_state_menu == CreateTO.waiting_for_choose:
-        # await state.update_data(chosen_sector="ВЭС")  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, "ВЭС")
-        await message.answer(
-            "Загрузите ФО по ВЭС:",
-            reply_markup=mp.go_back_menu)
-    else:
-        await message.answer('wrong')
-
-
-## ---------- Общий вид БС  --------------------
-@router_create.message(F.text == "Загрузить ФО по Общему виду")
-async def waiting_vid(message: Message, state: FSMContext):
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    if previous_state_menu == CreateTO.waiting_for_choose:
-        await state.set_state(CreateTO.choosing_vid)
-        save_state(message.chat.id, CreateTO.choosing_vid, "")
-        await state.update_data(previous_state=CreateTO.choosing_vid)
-
-        await message.answer(
-            "Выберите по какому пункту вы хотите загрузить фотографии:",
-            reply_markup=mp.vid_menu.as_markup(resize_keyboard=True)
-        )
-    else:
-        await message.answer('wrong')
-
-
-@router_create.message(CreateTO.choosing_vid)
-async def choose_vid(message: Message, state: FSMContext):
-    if message.text == "Вернуться назад":
-        await go_back(message, state)
-    else:
-        name1 = message.text
-        name = name1.replace("Загрузить ФО ", "")
-        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
-        await message.answer("Теперь отправьте фото.",
-                             reply_markup=mp.go_back)
-
-
-## ---------- Видео  --------------------
-@router_create.message(F.text == "Загрузить видео")
-async def waiting_ves(message: Message, state: FSMContext):
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    if previous_state_menu == CreateTO.waiting_for_choose:
-        # await state.update_data(chosen_sector="Видео")  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_video)
-        save_state(message.chat.id, CreateTO.waiting_for_video, "Видео")
-        await message.answer(
-            "Загрузите видео",
-            reply_markup=mp.go_back_menu)
-    else:
-        await message.answer('wrong')
-
-
 @router_create.message(CreateTO.waiting_for_video)
 async def handle_video(message: Message, state: FSMContext):
     if message.video:
@@ -562,3 +389,173 @@ async def handle_video(message: Message, state: FSMContext):
         await message.answer("Видео успешно сохранено.")
     else:
         await message.answer("Пожалуйста, отправьте видео.")
+
+
+## ---------- АФУ  --------------------
+@router_create.message(CreateTO.choosing_sector)
+async def waiting_sector(message: Message, state: FSMContext):
+    # data = await state.get_data()
+    # previous_state_menu = data.get('previous_state_menu')
+    user_id = message.chat.id
+    previous_state_menu = get_state(user_id)
+    # if previous_state_menu == CreateTO.waiting_for_choose:
+    datass = get_data_from_data(user_id)
+    builder = ReplyKeyboardBuilder()
+
+    for i in range(1, int(datass[2]) + 1):
+        builder.add(KeyboardButton(text=f"Загрузить ФО {str(i)} сектора"))
+    builder.add(KeyboardButton(text="Назад"))
+    builder.adjust(4)
+
+    await message.answer(
+        "Выберите по какому сектору вы хотите загрузить фотографию:",
+        reply_markup=builder.as_markup(resize_keyboard=True),
+    )
+    # else:
+    await state.set_state(CreateTO.choosen_sector)
+    save_state(user_id, CreateTO.choosen_sector, "")
+
+
+@router_create.message(CreateTO.choosen_sector)
+async def choose_sector(message: Message, state: FSMContext):
+    if message.text == "Вернуться назад":
+        await go_back(message, state)
+    else:
+        name1 = message.text
+        name = name1.replace("Загрузить ФО ", "")
+        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
+        await state.set_state(CreateTO.waiting_for_photo)
+        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
+        await message.answer("Теперь отправьте фото для выбранного сектора.",
+                             reply_markup=mp.go_back)
+
+
+## ---------- РРЛ  --------------------
+@router_create.message(CreateTO.choosing_rrl)
+async def waiting_rrl(message: Message, state: FSMContext):
+    user_id = message.chat.id
+    datass = get_data_from_data(user_id)
+
+    builder = ReplyKeyboardBuilder()
+
+    for i in range(1, int(datass[3]) + 1):  # количество РРЛ + 1
+        builder.add(KeyboardButton(text=f"Загрузить ФО {str(i)} РРЛ"))
+    builder.add(KeyboardButton(text="Назад"))
+    builder.adjust(3)
+    await message.answer(
+        "Выберите по какой РРЛ вы хотите загрузить фотографию:",
+        reply_markup=builder.as_markup(resize_keyboard=True),
+    )
+    await state.set_state(CreateTO.choosen_rrl)
+    save_state(message.chat.id, CreateTO.choosen_rrl, "")
+
+
+@router_create.message(CreateTO.choosen_rrl)
+async def choose_rrl(message: Message, state: FSMContext):
+    if message.text == "Вернуться назад":
+        await go_back(message, state)
+    else:
+        name1 = message.text
+        name = name1.replace("Загрузить ФО ", "")
+        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
+        await state.set_state(CreateTO.waiting_for_photo)
+        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
+        await message.answer("Теперь отправьте фото для выбранной РРЛ.",
+                             reply_markup=mp.go_back)
+
+
+## ---------- АКБ  --------------------
+@router_create.message(CreateTO.akb)
+async def waiting_akb(message: Message, state: FSMContext):
+    # await state.update_data(chosen_sector="АКБ")  # Сохраняем выбранный сектор
+    await state.set_state(CreateTO.waiting_for_photo)
+    save_state(message.chat.id, CreateTO.waiting_for_photo, "АКБ")
+    await message.answer(
+        "Загрузите фотографии по АКБ:",
+        reply_markup=mp.go_back_menu)
+
+
+## ---------- Скриншоты  --------------------
+@router_create.message(CreateTO.screenshots)
+async def waiting_screenshots(message: Message, state: FSMContext):
+    await state.set_state(CreateTO.waiting_for_photo)
+    save_state(message.chat.id, CreateTO.waiting_for_photo, "Скриншоты")
+    await message.answer(
+        "Загрузите cкриншоты:",
+        reply_markup=mp.go_back_menu)
+
+
+## ---------- КШ  --------------------
+@router_create.message(CreateTO.choosing_ksh)
+async def waiting_ksh(message: Message, state: FSMContext):
+    await message.answer(
+        "Выберите по какому пункту вы хотите загрузить фотографию:",
+        reply_markup=mp.ksh_menu.as_markup(resize_keyboard=True)
+    )
+    await state.set_state(CreateTO.choosen_ksh)
+    save_state(message.chat.id, CreateTO.choosen_ksh, "")
+
+
+@router_create.message(CreateTO.choosen_ksh)
+async def choose_ksh(message: Message, state: FSMContext):
+    if message.text == "Вернуться назад":
+        await go_back(message, state)
+    else:
+        name1 = message.text
+        name = name1.replace("Загрузить ФО ", "")
+        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
+        await state.set_state(CreateTO.waiting_for_photo)
+        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
+        await message.answer("Теперь отправьте фото.",
+                             reply_markup=mp.go_back)
+
+
+## ---------- ВЭС  --------------------
+@router_create.message(CreateTO.ves)
+async def waiting_ves(message: Message, state: FSMContext):
+    await state.set_state(CreateTO.waiting_for_photo)
+    save_state(message.chat.id, CreateTO.waiting_for_photo, "ВЭС")
+    await message.answer(
+        "Загрузите ФО по ВЭС:",
+        reply_markup=mp.go_back_menu)
+
+
+## ---------- Общий вид БС  --------------------
+@router_create.message(CreateTO.choosing_vid)
+async def waiting_vid(message: Message, state: FSMContext):
+    await state.update_data(previous_state=CreateTO.choosing_vid)
+
+    await message.answer(
+        "Выберите по какому пункту вы хотите загрузить фотографии:",
+        reply_markup=mp.vid_menu.as_markup(resize_keyboard=True)
+    )
+    await state.set_state(CreateTO.choosen_vid)
+    save_state(message.chat.id, CreateTO.choosen_vid, "")
+
+
+@router_create.message(CreateTO.choosen_vid)
+async def choose_vid(message: Message, state: FSMContext):
+    if message.text == "Вернуться назад":
+        await go_back(message, state)
+    else:
+        name1 = message.text
+        name = name1.replace("Загрузить ФО ", "")
+        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
+        await state.set_state(CreateTO.waiting_for_photo)
+        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
+        await message.answer("Теперь отправьте фото.",
+                             reply_markup=mp.go_back)
+
+
+## ---------- Видео  --------------------
+@router_create.message(CreateTO.video)
+async def waiting_video(message: Message, state: FSMContext):
+    # await state.update_data(chosen_sector="Видео")  # Сохраняем выбранный сектор
+    await message.answer(
+        "Загрузите видео",
+        reply_markup=mp.go_back_menu)
+    await state.set_state(CreateTO.waiting_for_video)
+    save_state(message.chat.id, CreateTO.waiting_for_video, "Видео")
+
+
+
