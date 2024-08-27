@@ -51,3 +51,35 @@ ksh_menu.row(bt.ksh_2, bt.back_menu_)
 vid_menu = ReplyKeyboardBuilder()
 vid_menu.row(bt.vid_number, bt.vid_closed)
 vid_menu.row(bt.vid_opened, bt.back_menu_)
+
+rectifier_menu = ReplyKeyboardBuilder()
+rectifier_menu.row(bt.flat_pack2, bt.energomera_2)
+rectifier_menu.row(bt.telecom_group, bt.huawei)
+rectifier_menu.row(bt.ericsson, bt.AEG, bt.delta)
+rectifier_menu.row(bt.powertel, bt.shtil)
+rectifier_menu.row(bt.previous_step)
+
+previous_step = ReplyKeyboardBuilder()
+previous_step.row(bt.previous_step)
+
+
+power_type_menu = ReplyKeyboardBuilder()
+power_type_menu.row(bt.energomera, bt.eltek)
+power_type_menu.row(bt.SC500, bt.huawei, bt.emerson)
+power_type_menu.row(bt.ipcom, bt.AEG, bt.delta)
+power_type_menu.row(bt.powertel, bt.shtil)
+power_type_menu.row(bt.previous_step)
+
+
+ksh_type_menu = ReplyKeyboardBuilder()
+ksh_type_menu.row(bt.eltek, bt.ericsson)
+ksh_type_menu.row(bt.powertel, bt.apparat)
+ksh_type_menu.row(bt.intercross, bt.intercross_huawei)
+ksh_type_menu.row(bt.telecom_group, bt.shtil)
+ksh_type_menu.row(bt.tech_room)
+ksh_type_menu.row(bt.energomera, bt.energomera_new)
+ksh_type_menu.row(bt.previous_step)
+
+comments = ReplyKeyboardBuilder()
+comments.row(bt.no_comment)
+comments.row(bt.previous_step)

@@ -10,6 +10,8 @@ from aiogram.types import Message, ReplyKeyboardRemove
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
+from bot.handlers.start_menu_handler import cmd_start
+
 router_create = Router()
 
 
@@ -131,6 +133,19 @@ def write_to_excel(column_number, user_id, value):
 
 
 class CreateTO(StatesGroup):
+    type_ksh = State()
+    counter_number = State()
+    serial_number_counter = State()
+    comments = State()
+    type_power = State()
+    quantity_group_akb = State()
+    capasity_akb = State()
+    quantity_rectifier = State()
+    type_rectifier = State()
+    quantity_amper = State()
+    quantity_system_power = State()
+    check_up = State()
+    exit = State()
     video = State()
     choosen_vid = State()
     ves = State()
@@ -166,7 +181,9 @@ async def waiting_name(message: Message, state: FSMContext):
     if check_number(bs_number) and checking_number(bs_number):
         # await state.update_data(baseband_number=bs_number)
         user_id = message.chat.id
-
+        user_name = None
+        user_phone =None
+        user_orgn = None
         # получаем данные из таблицы регистрации фио, номер и ПО
         workbook_reg = load_workbook('registered.xlsx')
         worksheet_reg = workbook_reg.active
@@ -203,51 +220,46 @@ async def waiting_name(message: Message, state: FSMContext):
 
 @router_create.message(CreateTO.waiting_for_quantity_antenna)
 async def waiting_quantity_antenna(message: Message, state: FSMContext):
-    bs_quantity_antenna = int(message.text)
-    if bs_quantity_antenna > 20:
-        await message.reply("Превышено максимальное количество секторов. "
-                            "Введите новое количество секторов меньшее 20."
-                            )
+    if message.text.isdigit():
+        bs_quantity_antenna = int(message.text)
+        if bs_quantity_antenna > 20:
+            await message.reply("Превышено максимальное количество секторов. "
+                                "Введите новое количество секторов меньшее 20."
+                                )
+        else:
+            # await state.update_data(bs_quantity_antenna=bs_quantity_antenna)
+            write_to_excel(4, message.chat.id, bs_quantity_antenna)  # сохраняем кол-во секторов
+            await state.set_state(CreateTO.waiting_for_quantity_rrl)  # состояние ожидания кол-ва РРЛ
+            save_state(message.chat.id, CreateTO.waiting_for_quantity_rrl, "")  # сохраняем состояние
+            await message.reply("Введите количество РРЛ на БС",
+                                reply_markup=mp.numbers.as_markup(resize_keyboard=True)
+                                )
     else:
-        # await state.update_data(bs_quantity_antenna=bs_quantity_antenna)
-        write_to_excel(4, message.chat.id, bs_quantity_antenna)  # сохраняем кол-во секторов
-        await state.set_state(CreateTO.waiting_for_quantity_rrl)  # состояние ожидания кол-ва РРЛ
-        save_state(message.chat.id, CreateTO.waiting_for_quantity_rrl, "")  # сохраняем состояние
-        await message.reply("Введите количество РРЛ на БС",
-                            reply_markup=mp.numbers.as_markup(resize_keyboard=True)
-                            )
+        await message.answer("Пожалуйста, введите число цифрами. Например, '12'")
 
 
 @router_create.message(CreateTO.waiting_for_quantity_rrl)
 async def waiting_quantity_rrl(message: Message, state: FSMContext):
-    bs_quantity_rrl = int(message.text)
-    if bs_quantity_rrl > 25:
-        await message.reply("Превышено максимальное количество РРЛ. "
-                            "Введите новое количество секторов меньшее 25."
-                            )
+    if message.text.isdigit():
+        bs_quantity_rrl = int(message.text)
+        if bs_quantity_rrl > 25:
+            await message.reply("Превышено максимальное количество РРЛ. "
+                                "Введите новое количество секторов меньшее 25."
+                                )
+        else:
+            # await state.update_data(bs_quantity_rrl=bs_quantity_rrl)
+            write_to_excel(5, message.chat.id, bs_quantity_rrl)  # сохраняем кол-во РРЛ
+            await state.set_state(CreateTO.waiting_for_choose)  # состояние ожидания пункта ФО по ТО
+            save_state(message.chat.id, CreateTO.waiting_for_choose, "")  # сохраняем состояние
+            await choose_otchet(message, state)
     else:
-        # await state.update_data(bs_quantity_rrl=bs_quantity_rrl)
-        write_to_excel(5, message.chat.id, bs_quantity_rrl)  # сохраняем кол-во РРЛ
-        await state.set_state(CreateTO.waiting_for_choose)  # состояние ожидания пункта ФО по ТО
-        save_state(message.chat.id, CreateTO.waiting_for_choose, "")  # сохраняем состояние
-
-        # await state.update_data(previous_state_menu=CreateTO.waiting_for_choose)
-        # l = ["Загрузить ФО по АФУ", "Загрузить ФО по РРЛ", "Загрузить ФО по АКБ", "Назад"]
-        # print(message.text)
-        # if message.text not in l:
-        #     await message.answer("Пожалуйста, выберите пункт заполнения отчета с помощью кнопок",
-        #                 reply_markup=mp.send_menu.as_markup(resize_keyboard=True)
-        #                 )
-        # else:
-        await choose_otchet(message, state)
+        await message.answer("Пожалуйста, введите число цифрами. Например, '12'")
 
 
 @router_create.message(CreateTO.waiting_for_choose)
 async def choose_otchet(message: Message, state: FSMContext):
     user_text = message.text
     user_id = message.chat.id
-
-    # add checking for text
 
     if user_text == "Загрузить ФО по АФУ":
         await state.set_state(CreateTO.choosing_sector)
@@ -281,6 +293,14 @@ async def choose_otchet(message: Message, state: FSMContext):
         await state.set_state(CreateTO.video)
         save_state(user_id, CreateTO.video, "")
         await waiting_video(message, state)
+    elif user_text == "Заполнить электронный чек-лист":
+        await state.set_state(CreateTO.check_up)
+        save_state(user_id, CreateTO.check_up, "")
+        await waiting_check_up(message, state)
+    elif user_text == "Выход без сохранения":
+        await state.set_state(CreateTO.exit)
+        save_state(user_id, CreateTO.exit, "")
+        await waiting_exit(message, state)
     else:
         await message.answer("Пожалуйста, выберите пункт заполнения отчета с помощью кнопок",
                              reply_markup=mp.send_menu.as_markup(resize_keyboard=True)
@@ -326,15 +346,14 @@ async def go_back(message: Message, state: FSMContext):
         await state.set_state(CreateTO.waiting_for_choose)
         save_state(message.chat.id, CreateTO.waiting_for_choose, "")
         await waiting_vid(message, state)
+    else:
+        await message.answer("Выберите вариант из кнопок")
 
 
 @router_create.message(CreateTO.waiting_for_photo)
 async def handle_photo(message: Message, state: FSMContext):
     if message.photo:
         photo_id = message.photo[-1].file_id  # Берем самое большое фото
-        # button_text = message.text
-        # user_data = await state.get_data()
-        # button_text = user_data.get("chosen_sector")
         button_text = get_name_in_state(message.chat.id)
         data = get_data_from_data(message.chat.id)
 
@@ -394,12 +413,7 @@ async def handle_video(message: Message, state: FSMContext):
 ## ---------- АФУ  --------------------
 @router_create.message(CreateTO.choosing_sector)
 async def waiting_sector(message: Message, state: FSMContext):
-    # data = await state.get_data()
-    # previous_state_menu = data.get('previous_state_menu')
-    user_id = message.chat.id
-    previous_state_menu = get_state(user_id)
-    # if previous_state_menu == CreateTO.waiting_for_choose:
-    datass = get_data_from_data(user_id)
+    datass = get_data_from_data(message.chat.id)
     builder = ReplyKeyboardBuilder()
 
     for i in range(1, int(datass[2]) + 1):
@@ -412,22 +426,28 @@ async def waiting_sector(message: Message, state: FSMContext):
         reply_markup=builder.as_markup(resize_keyboard=True),
     )
     # else:
+
     await state.set_state(CreateTO.choosen_sector)
-    save_state(user_id, CreateTO.choosen_sector, "")
+    save_state(message.chat.id, CreateTO.choosen_sector, "")
+
 
 
 @router_create.message(CreateTO.choosen_sector)
 async def choose_sector(message: Message, state: FSMContext):
-    if message.text == "Вернуться назад":
-        await go_back(message, state)
+    if message.text:
+        if message.text == "Вернуться назад":
+            await go_back(message, state)
+        else:
+            name1 = message.text
+            name = name1.replace("Загрузить ФО ", "")
+            # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
+            await state.set_state(CreateTO.waiting_for_photo)
+            save_state(message.chat.id, CreateTO.waiting_for_photo, name)
+            await message.answer("Теперь отправьте фото для выбранного сектора.",
+                                 reply_markup=mp.go_back)
+
     else:
-        name1 = message.text
-        name = name1.replace("Загрузить ФО ", "")
-        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
-        await message.answer("Теперь отправьте фото для выбранного сектора.",
-                             reply_markup=mp.go_back)
+        await message.answer("Пожалуйста, нажмите кнопку")
 
 
 ## ---------- РРЛ  --------------------
@@ -452,16 +472,19 @@ async def waiting_rrl(message: Message, state: FSMContext):
 
 @router_create.message(CreateTO.choosen_rrl)
 async def choose_rrl(message: Message, state: FSMContext):
-    if message.text == "Вернуться назад":
-        await go_back(message, state)
+    if message.text:
+        if message.text == "Вернуться назад":
+            await go_back(message, state)
+        else:
+            name1 = message.text
+            name = name1.replace("Загрузить ФО ", "")
+            # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
+            await state.set_state(CreateTO.waiting_for_photo)
+            save_state(message.chat.id, CreateTO.waiting_for_photo, name)
+            await message.answer("Теперь отправьте фото для выбранной РРЛ.",
+                                 reply_markup=mp.go_back)
     else:
-        name1 = message.text
-        name = name1.replace("Загрузить ФО ", "")
-        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
-        await message.answer("Теперь отправьте фото для выбранной РРЛ.",
-                             reply_markup=mp.go_back)
+        await message.answer("Пожалуйста, нажмите кнопку")
 
 
 ## ---------- АКБ  --------------------
@@ -498,16 +521,20 @@ async def waiting_ksh(message: Message, state: FSMContext):
 
 @router_create.message(CreateTO.choosen_ksh)
 async def choose_ksh(message: Message, state: FSMContext):
-    if message.text == "Вернуться назад":
-        await go_back(message, state)
+    if message.text:
+
+        if message.text == "Вернуться назад":
+            await go_back(message, state)
+        else:
+            name1 = message.text
+            name = name1.replace("Загрузить ФО ", "")
+            # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
+            await state.set_state(CreateTO.waiting_for_photo)
+            save_state(message.chat.id, CreateTO.waiting_for_photo, name)
+            await message.answer("Теперь отправьте фото.",
+                                 reply_markup=mp.go_back)
     else:
-        name1 = message.text
-        name = name1.replace("Загрузить ФО ", "")
-        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
-        await message.answer("Теперь отправьте фото.",
-                             reply_markup=mp.go_back)
+        await message.answer("Пожалуйста, нажмите кнопку")
 
 
 ## ---------- ВЭС  --------------------
@@ -535,17 +562,20 @@ async def waiting_vid(message: Message, state: FSMContext):
 
 @router_create.message(CreateTO.choosen_vid)
 async def choose_vid(message: Message, state: FSMContext):
-    if message.text == "Вернуться назад":
-        await go_back(message, state)
-    else:
-        name1 = message.text
-        name = name1.replace("Загрузить ФО ", "")
-        # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
-        await state.set_state(CreateTO.waiting_for_photo)
-        save_state(message.chat.id, CreateTO.waiting_for_photo, name)
-        await message.answer("Теперь отправьте фото.",
-                             reply_markup=mp.go_back)
+    if message.text:
 
+        if message.text == "Вернуться назад":
+            await go_back(message, state)
+        else:
+            name1 = message.text
+            name = name1.replace("Загрузить ФО ", "")
+            # await state.update_data(chosen_sector=name)  # Сохраняем выбранный сектор
+            await state.set_state(CreateTO.waiting_for_photo)
+            save_state(message.chat.id, CreateTO.waiting_for_photo, name)
+            await message.answer("Теперь отправьте фото.",
+                                 reply_markup=mp.go_back)
+    else:
+        await message.answer("Пожалуйста, нажмите кнопку")
 
 ## ---------- Видео  --------------------
 @router_create.message(CreateTO.video)
@@ -559,3 +589,346 @@ async def waiting_video(message: Message, state: FSMContext):
 
 
 
+@router_create.message(F.text == "К предыдущему шагу")
+async def previous_step(message: Message, state: FSMContext):
+    workbook = load_workbook('states.xlsx')
+    worksheet = workbook.active
+    previous_state = None
+    # Ищем строку с существующим состоянием пользователя
+    for row in range(2, worksheet.max_row + 1):
+        if worksheet.cell(row=row, column=1).value == message.chat.id:
+            # Если строка найдена, удаляем ее
+            previous_state = worksheet.cell(row=row, column=3).value
+            break
+
+    print(previous_state)
+    # Сохраняем Excel-файл
+    workbook.close()
+    print(message.text)
+    if previous_state == CreateTO.check_up:
+        await state.set_state(CreateTO.check_up)
+        save_state(message.chat.id, CreateTO.check_up, "")
+        await waiting_check_up(message, state)  # Возвращаемся к выбору сектора
+    elif previous_state == CreateTO.quantity_system_power:
+        await state.set_state(CreateTO.quantity_system_power)
+        save_state(message.chat.id, CreateTO.quantity_system_power, "")
+        await waiting_quantity_system_power(message, state)
+    elif previous_state == CreateTO.quantity_amper:
+        print('2')
+        await message.answer('come back')
+        await state.set_state(CreateTO.quantity_amper)
+        save_state(message.chat.id, CreateTO.quantity_amper, "")
+        await waiting_quantity_amper(message, state)
+    elif previous_state == CreateTO.quantity_rectifier:
+        print('1')
+        await message.answer('come back')
+        await state.set_state(CreateTO.quantity_rectifier)
+        save_state(message.chat.id, CreateTO.quantity_rectifier, "")
+        await waiting_quantity_rectifier(message, state)
+    elif previous_state == CreateTO.type_rectifier:
+        await state.set_state(CreateTO.type_rectifier)
+        save_state(message.chat.id, CreateTO.type_rectifier, "")
+        await waiting_type_rectifier(message, state)
+    # elif previous_state == CreateTO.capasity_akb:
+    #     await state.set_state(CreateTO.quantity_group_akb)
+    #     save_state(message.chat.id, CreateTO.quantity_group_akb, "")
+    #     await waiting_quantity_group_akb(message, state)
+    # elif previous_state == CreateTO.type_power:
+    #     await state.set_state(CreateTO.capasity_akb)
+    #     save_state(message.chat.id, CreateTO.capasity_akb, "")
+    #     await waiting_capasity_akb(message, state)
+    #
+    # elif previous_state == CreateTO.type_ksh:
+    #     await state.set_state(CreateTO.type_power)
+    #     save_state(message.chat.id, CreateTO.type_power, "")
+    #     await waiting_type_power(message, state)
+    # elif previous_state == CreateTO.counter_number:
+    #     await state.set_state(CreateTO.type_ksh)
+    #     save_state(message.chat.id, CreateTO.type_ksh, "")
+    #     await waiting_type_ksh(message, state)
+    # elif previous_state == CreateTO.serial_number_counter:
+    #     await state.set_state(CreateTO.counter_number)
+    #     save_state(message.chat.id, CreateTO.counter_number, "")
+    #     await waiting_counter_number(message, state)
+    # elif previous_state == CreateTO.comments:
+    #     await state.set_state(CreateTO.serial_number_counter)
+    #     save_state(message.chat.id, CreateTO.serial_number_counter, "")
+    #     await waiting_serial_number_counter(message, state)
+    else:
+        await message.answer("Выберите вариант из кнопок")
+
+
+# заполнить чек лист
+@router_create.message(CreateTO.check_up)
+async def waiting_check_up(message: Message, state: FSMContext):
+
+    print(message.text)
+    await message.answer("Сколько систем питания на БС? \nОтвет введите цифрами",
+                         reply_markup=ReplyKeyboardRemove())
+    await state.set_state(CreateTO.quantity_system_power)
+    save_state(message.chat.id, CreateTO.quantity_system_power, "")
+
+# заполнить cистемы питания на БС
+@router_create.message(CreateTO.quantity_system_power)
+async def waiting_quantity_system_power(message: Message, state: FSMContext):
+    print(message.text)
+    num = message.text
+    if message.text == "К предыдущему шагу":
+        await previous_step(message, state)
+    else:
+        if num.isdigit() and int(num)<=3:
+            write_to_excel(10, message.chat.id, int(num))
+            await message.answer("Какой ток нагрузки оборудования в Амперах?",
+                                 reply_markup=mp.previous_step.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.quantity_amper)
+            save_state(message.chat.id, CreateTO.quantity_amper, "")
+        else:
+            await message.answer("Введите ответ цифрами. Например, '2'")
+
+
+# заполнить ток нагрузки в амперах
+@router_create.message(CreateTO.quantity_amper)
+async def waiting_quantity_amper(message: Message, state: FSMContext):
+    num = message.text
+    if message.text == "К предыдущему шагу":
+        await previous_step(message, state)
+    else:
+        if num.isdigit():
+            write_to_excel(11, message.chat.id, int(num))
+            await message.answer("Какое количество выпрямителей?",
+                                 reply_markup=mp.previous_step.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.quantity_rectifier)
+            save_state(message.chat.id, CreateTO.quantity_rectifier, "")
+        else:
+            await message.answer("Введите ответ цифрами. Например, '2'")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.quantity_rectifier)
+async def waiting_quantity_rectifier(message: Message, state: FSMContext):
+    num = message.text
+    if message.text == "К предыдущему шагу":
+        await previous_step(message, state)
+    else:
+        if num.isdigit():
+            write_to_excel(12, message.chat.id, int(num))
+            await message.answer("Выберите тип выпрямителя из списка:",
+                                 reply_markup=mp.rectifier_menu.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.type_rectifier)
+            save_state(message.chat.id, CreateTO.type_rectifier, "")
+        else:
+            await message.answer("Введите ответ цифрами. Например, '2'")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.type_rectifier)
+async def waiting_type_rectifier(message: Message, state: FSMContext):
+    num = message.text
+    l = ["Flat Pack2", "Энергомера SP-II", "Телеком-Групп", "Huawei", "Ericsson", "AEG", "Delta", "Powertel", "Штиль"]
+    if message.text == "К предыдущему шагу":
+        await previous_step(message, state)
+    else:
+        if num in l:
+            write_to_excel(13, message.chat.id, num)
+            await message.answer("Сколько групп АКБ на станции?",
+                                 reply_markup=mp.previous_step.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.quantity_group_akb)
+            save_state(message.chat.id, CreateTO.quantity_group_akb, "")
+        else:
+            await message.answer("Выберите тип выпрямителя из предложенных")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.quantity_group_akb)
+async def waiting_quantity_group_akb(message: Message, state: FSMContext):
+    num = message.text
+    if message.text == "К предыдущему шагу":
+        await previous_step(message, state)
+    else:
+        if num.isdigit():
+            write_to_excel(14, message.chat.id, int(num))
+            await message.answer("Введите ёмкость АКБ числом",
+                                 reply_markup=mp.previous_step.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.capasity_akb)
+            save_state(message.chat.id, CreateTO.capasity_akb, "")
+        else:
+            await message.answer("Введите ответ цифрами. Например, '2'")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.capasity_akb)
+async def waiting_capasity_akb(message: Message, state: FSMContext):
+    num = message.text
+    if message.text == "К предыдущему шагу":
+        await previous_step(message, state)
+    else:
+        if num.isdigit():
+            write_to_excel(15, message.chat.id, int(num))
+            await message.answer("Выберите тип источника питания",
+                                 reply_markup=mp.power_type_menu.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.type_power)
+            save_state(message.chat.id, CreateTO.type_power, "")
+        else:
+            await message.answer("Выберите тип источника питания из предложенных")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.type_power)
+async def waiting_type_power(message: Message, state: FSMContext):
+    num = message.text
+    if message.text:
+        if message.text == "К предыдущему шагу":
+            await previous_step(message, state)
+        else:
+            write_to_excel(16, message.chat.id, num)
+            await message.answer("Выберите тип климатического шкафа из списка:",
+                                 reply_markup=mp.ksh_type_menu.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.type_ksh)
+            save_state(message.chat.id, CreateTO.type_ksh, "")
+    else:
+        await message.answer("Пожалуйста, отправьте текст")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.type_ksh)
+async def waiting_type_ksh(message: Message, state: FSMContext):
+    num = message.text
+    l = ["Eltek", "Ericsson", "Powertel", "Аппаратная", "Интеркросс", "Энергомера (Новая)",
+         "Интеркросс Huawei", "Телеком-Групп", "Техническое помещени", "Штиль", "Энергомера"]
+    if message.text == "К предыдущему шагу":
+        await previous_step(message, state)
+    else:
+        if num in l:
+            write_to_excel(17, message.chat.id, num)
+            await message.answer("Введите показания электрического счётчика",
+                                 reply_markup= mp.previous_step.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.counter_number)
+            save_state(message.chat.id, CreateTO.counter_number, "")
+        else:
+            await message.answer("Выберите тип выпрямителя из предложенных")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.counter_number)
+async def waiting_counter_number(message: Message, state: FSMContext):
+    num = message.text
+    if message.text:
+        if message.text == "К предыдущему шагу":
+            await previous_step(message, state)
+        else:
+            write_to_excel(18, message.chat.id, num)
+            await message.answer("Введите серийный номер счётчика",
+                                 reply_markup=mp.previous_step.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.serial_number_counter)
+            save_state(message.chat.id, CreateTO.serial_number_counter, "")
+    else:
+        await message.answer("Введите ответ цифрами. Например, '2'")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.serial_number_counter)
+async def waiting_serial_number_counter(message: Message, state: FSMContext):
+    num = message.text
+    if message.text:
+        if message.text == "К предыдущему шагу":
+            await previous_step(message, state)
+        else:
+            write_to_excel(19, message.chat.id, num)
+            await message.answer("Введите замечания по недостаткам выявленные в ходе ТО. "
+                                 "\nЕсли замечаний нет отправьте фразу: «Нет замечаний»",
+                                 reply_markup=mp.comments.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.comments)
+            save_state(message.chat.id, CreateTO.comments, "")
+    else:
+        await message.answer("Введите текст")
+
+
+# заполнить количетсво выпрямителей
+@router_create.message(CreateTO.comments)
+async def waiting_comments(message: Message, state: FSMContext):
+    num = message.text
+    if message.text:
+        if message.text == "К предыдущему шагу":
+            await previous_step(message, state)
+        else:
+            write_to_excel(20, message.chat.id, num)
+            await message.answer("Электронный чек-лист заполнен",
+                                 reply_markup=mp.comments.as_markup(resize_keyboard=True)
+                                 )
+            await state.set_state(CreateTO.waiting_for_choose)
+            save_state(message.chat.id, CreateTO.waiting_for_choose, "")
+            await waiting_sector(message, state)  # Возвращаемся к выбору сектора
+    else:
+        await message.answer("Введите текст")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## ---------- Выход без сохранения  --------------------
+@router_create.message(CreateTO.exit)
+async def waiting_exit(message: Message, state: FSMContext):
+        #      табл data
+    workbook = load_workbook('data.xlsx')
+    worksheet = workbook.active
+    user_id =message.chat.id
+    last_match_row = None
+    for row in range(2, worksheet.max_row + 1):
+    # Ищем последнее совпадение в 6 столбце со значением 'user_id'
+        if worksheet.cell(row=row, column=6).value == user_id:
+            last_match_row = row
+
+            # Очищаем строку
+    print(last_match_row)
+    value_to_keep = worksheet.cell(row=last_match_row, column=1).value             # Запоминаем значение в 1 столбце
+
+    for col in range(1, worksheet.max_column + 1):
+        worksheet.cell(row=last_match_row, column=col).value = None
+    # value_to_keep = worksheet.cell(row=last_match_row, column=1).value             # Запоминаем значение в 1 столбце
+    workbook.save('data.xlsx')
+    workbook.close()
+
+    #      табл файлы
+    workbook = load_workbook('Файлы.xlsx')
+    worksheet = workbook.active
+    for row in range(2, worksheet.max_row + 1):
+    # Ищем последнее совпадение в 6 столбце со значением 'user_id'
+        if worksheet.cell(row=row, column=1).value == value_to_keep:
+            last_match_row = row
+            for col in range(1, worksheet.max_column + 1):
+                worksheet.cell(row=last_match_row, column=col).value = None
+
+    # value_to_keep = worksheet.cell(row=last_match_row, column=1).value             # Запоминаем значение в 1 столбце
+    workbook.save('Файлы.xlsx')
+    workbook.close()
+    await cmd_start(message, state)

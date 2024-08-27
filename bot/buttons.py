@@ -47,3 +47,30 @@ back_menu_ = KeyboardButton(text="Назад")
 vid_number = KeyboardButton(text="Загрузить ФО Общий вид БС")
 vid_closed = KeyboardButton(text="Загрузить ФО Общий вид закрытого КШ")
 vid_opened = KeyboardButton(text="Загрузить ФО Общий вид открытого КШ")
+
+flat_pack2 = KeyboardButton(text="Flat Pack2")
+energomera_2 = KeyboardButton(text="Энергомера SP-II")
+telecom_group = KeyboardButton(text="Телеком-Групп")
+huawei = KeyboardButton(text="Huawei")
+ericsson = KeyboardButton(text="Ericsson")
+AEG = KeyboardButton(text="AEG")
+delta = KeyboardButton(text="Delta")
+powertel = KeyboardButton(text="Powertel")
+shtil = KeyboardButton(text="Штиль")
+
+previous_step = KeyboardButton(text="К предыдущему шагу")
+
+
+energomera = KeyboardButton(text="Энергомера")
+eltek = KeyboardButton(text="Eltek")
+SC500 = KeyboardButton(text="SC500")
+ipcom = KeyboardButton(text="IPCOM")
+emerson = KeyboardButton(text="Emerson")
+
+apparat = KeyboardButton(text="Аппаратная")
+intercross = KeyboardButton(text="Интеркросс")
+intercross_huawei = KeyboardButton(text="Интеркросс Huawei")
+tech_room = KeyboardButton(text="Техническое помещение")
+energomera_new = KeyboardButton(text="Энергомера (Новая)")
+
+no_comment = KeyboardButton(text="Нет замечаний")
